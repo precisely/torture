@@ -34,7 +34,7 @@ export class Session {
   }) {
     this.userInterface = userInterface;
     this.typingSpeed = typingSpeed || 100;
-    this.typing = typing ||  true;
+    this.typing = isUndefined(typing) ? true : typing;
     this.localVars = this.globalVars;
     this.mode = mode || 'chat';
   }
@@ -99,7 +99,7 @@ export class Session {
     return (/^[A-Z]/.test(key[0])) ? this.globalVars[key] : this.localVars[key];
   }
 
-  public async waitForUserEvent(eventId: EventId): Promise<any> {
+  public async waitForUserEvent(eventId: [string, string], handler?: (result: any) => any): Promise<any> {
     const [, choiceKey] = this.eventId = eventId;
     this.eventResult = undefined;
     while (isUndefined(this.eventResult)) {
@@ -107,7 +107,11 @@ export class Session {
     }
     const result = this.eventResult;
     this.setv(choiceKey, result);
+    this.eventId = undefined;
     this.eventResult = undefined;
+    if (handler) {
+      await handler(result);
+    }
     return result;
   }
 
@@ -120,9 +124,16 @@ export class Session {
     };
     const choose = async (choiceKey: string, buttons: ReplyButtonDef[] | CompactReplyActionsDef | string[]) => {
       const eventId: EventId = [fnName, choiceKey];
+      const normalizedButtons = normalizeReplyButtons(buttons);
+      await this.userInterface.showReplyButtons(eventId, normalizedButtons);
+      const result = await this.waitForUserEvent(eventId, async (result: string) => {
+        const button = normalizedButtons.find(b => b.result == result);
+        if (button && button.do) {
+          await button.do();
+        }
+      });
+      return result;
 
-      await this.userInterface.showReplyButtons(eventId, normalizeReplyButtons(buttons));
-      await this.waitForUserEvent(eventId);
     }
     return { chat, choose, setv, getv };
   }

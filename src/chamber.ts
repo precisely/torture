@@ -6,9 +6,16 @@ import { isNumber } from "util";
 
 export class TortureChamber implements IUserInterface {
   public readonly session: Session;
-  constructor(mode: SessionMode = 'chat') {
+  constructor({ mode = 'chat', typing = true, typingSpeed = 100 }:
+    {
+      mode?: SessionMode,
+      typing?: boolean,
+      typingSpeed?: number
+    }) {
     this.session = new Session({
       userInterface: this,
+      typing,
+      typingSpeed,
       mode
     });
   }
@@ -27,12 +34,15 @@ export class TortureChamber implements IUserInterface {
       console.log(`${index+1}) ${button.text}`);
     });
 
-    var selection;
+    var selection: number;
     do {
-      selection = readlineSync.questionInt(`Enter a number from 1 to ${buttons.length}`);
+      selection = readlineSync.questionInt(`Choose (1 - ${buttons.length}): `);
     } while (!isNumber(selection) || selection<1 || selection>buttons.length);
 
-    await this.session.handleEvent(eventId, buttons[selection - 1].result);
+    // simulate user asynchronously clicking a button:
+    setTimeout(() => {
+      this.session.handleEvent(eventId, buttons[selection - 1].result);
+    }, 100);
   }
 
   async showText(text: string) {
