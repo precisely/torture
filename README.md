@@ -1,3 +1,3 @@
 # Torture
 
-A terrible DSL for building chat-like interactions that is painful to use.
+A terrible DSL for painfully building chat-like interactions.
