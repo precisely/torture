@@ -9,9 +9,10 @@ export type Process = (methods: SessionMethods, ...args: any[]) => Promise<any>;
 
 export type SessionMethods = {
   setv(key: string, value: any): any,
-  getv(key: string): any,
+  getv(key?: string | undefined | true): any,
   chat(text: string): Promise<void>,
-  choose(choiceKey: string, buttons: ReplyButtonDef[] | CompactReplyActionsDef | string[]): Promise<any>
+  choose(choiceKey: string, buttons: ReplyButtonDef[] | CompactReplyActionsDef | string[]): Promise<any>,
+  start(fn: Process | [Process, string], ...args: any[]): Promise<any>;
 };
 
 export type CompactReplyActionsDef = { [choiceKey: string]: () => any };
@@ -39,7 +40,15 @@ export class Session {
     this.mode = mode || 'chat';
   }
 
+  public async getData(... keys: string[]): Promise<undefined | string> {
+    console.log(`Fake attempting to get keys: ${keys}`);
+    // this should call an object supporting IBackendStorage or somesuch to abstract
+    // away the loading of files.
+    return undefined;
+  }
+
   public async start(startArg: Process | [Process, string], ...args: any[]): Promise<Vars> {
+    debugger;
     var [processFn, captureKey] = isArray(startArg) ? startArg : [startArg, null];
     const prevVars = this.localVars;
     if (captureKey) {
@@ -88,15 +97,29 @@ export class Session {
   }
 
   public setv(key:string, value: any) {
-    if (/^[A-Z]/.test(key[0])) {
+    if (startsWithUpper(key[0])) {
       return this.globalVars[key] = value;
     } else {
       return this.localVars[key] = value;
     }
   }
 
-  public getv(key: string) {
-    return (/^[A-Z]/.test(key[0])) ? this.globalVars[key] : this.localVars[key];
+  /**
+   *
+   * @param key -
+   *        lowercase first letter = local value
+   *        uppercase first letter = global value
+   *        undefined = return all local values
+   *        true = return global values (which inlcudes all local values)
+   */
+  public getv(key?: string | true) {
+    if (isString(key)) {
+      return (startsWithUpper(key[0])) ? this.globalVars[key] : this.localVars[key];
+    } else if (key === true) {
+      return this.globalVars;
+    } else {
+      return this.localVars;
+    }
   }
 
   public async waitForUserEvent(eventId: [string, string], handler?: (result: any) => any): Promise<any> {
@@ -117,8 +140,9 @@ export class Session {
 
   public methods(fn: Function): SessionMethods {
     const fnName = fn.name;
+    const start = async (fn: Process | [Process, string], ...args: any[]) => { return await this.start(fn, ...args); }
     const setv = (key: string, value: any) => { return this.setv(key, value); }
-    const getv = (key: string) => { return this.getv(key); }
+    const getv = (key?: string | true) => { return this.getv(key); }
     const chat = async (text: string) => {
       return await this.chat(text);
     };
@@ -135,7 +159,7 @@ export class Session {
       return result;
 
     }
-    return { chat, choose, setv, getv };
+    return { chat, choose, setv, getv, start };
   }
 }
 
@@ -162,4 +186,8 @@ function normalizeReplyButtons(buttons: any): ReplyButtonDef[] {
 
 export function timeout(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function startsWithUpper(key: string) {
+  return /^[A-Z]/.test(key);
 }
