@@ -48,30 +48,32 @@ export class Session {
   }
 
   public async start(startArg: Process | [Process, string], ...args: any[]): Promise<Vars> {
-    debugger;
     var [processFn, captureKey] = isArray(startArg) ? startArg : [startArg, null];
     const prevVars = this.localVars;
     if (captureKey) {
       this.localVars = this.localVars[captureKey] = {};
     }
     var result = await processFn(this.methods(processFn), ...args);
-    result = isUndefined(result) ? this.localVars : result;
     this.localVars = prevVars;
     // this is a point at which results might be saved to backend
     return result;
   }
 
-  public async chat(text: string) {
+  public async pause(characterCount: number, ellipsis: boolean = true) {
     const typing = isUndefined(this.typing) ? this.typing : this.typing;
     const wordsPerSecond = (isUndefined(this.typingSpeed) ? this.typingSpeed : this.typingSpeed) / 60;
     const charactersPerSecond = 5 * wordsPerSecond;
 
     if (typing) {
-      await this.userInterface.showEllipsis();
-      const seconds = text.length / charactersPerSecond;
+      if (ellipsis) await this.userInterface.showEllipsis();
+      const seconds = characterCount / charactersPerSecond;
       await timeout(seconds * 1000);
-      await this.userInterface.hideEllipsis();
+      if (ellipsis) await this.userInterface.hideEllipsis();
     }
+  }
+
+  public async chat(text: string) {
+    await this.pause(text.length, true);
     await this.userInterface.showText(text);
     return;
   }
@@ -157,7 +159,6 @@ export class Session {
         }
       });
       return result;
-
     }
     return { chat, choose, setv, getv, start };
   }

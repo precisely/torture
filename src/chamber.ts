@@ -30,9 +30,14 @@ export class TortureChamber implements IUserInterface {
   }
 
   async showReplyButtons(eventId: EventId, buttons: ReplyButtonDef[]) {
-    buttons.forEach((button, index) => {
-      console.log(`${index+1}) ${button.text}`);
-    });
+    await this.session.pause(20, false);
+
+    for (var index = 0; index < buttons.length; index++) {
+      let button = buttons[index];
+      let text = `${index + 1}) ${button.text}`;
+      await this.session.pause(text.length);
+      console.log(text);
+    }
 
     var selection: number;
     do {
