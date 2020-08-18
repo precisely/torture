@@ -13,6 +13,7 @@ export type SessionMethods = {
   chat(text: string): Promise<void>,
   choose(choiceKey: string, buttons: ReplyButtonDef[] | CompactReplyActionsDef | string[]): Promise<any>,
   start(fn: Process | [Process, string], ...args: any[]): Promise<any>;
+  getInput(resultKey: string, re?: string, hintMessage?: string): Promise<string>;
 };
 
 export type CompactReplyActionsDef = { [choiceKey: string]: () => any };
@@ -40,8 +41,8 @@ export class Session {
     this.mode = mode || 'chat';
   }
 
-  public async getData(... keys: string[]): Promise<undefined | string> {
-    console.log(`Fake attempting to get keys: ${keys}`);
+  public async fetch(... keys: string[]): Promise<undefined | string> {
+    console.log(`(Fake attempting to get keys: ${keys}`);
     // this should call an object supporting IBackendStorage or somesuch to abstract
     // away the loading of files.
     return undefined;
@@ -89,6 +90,7 @@ export class Session {
       this.userEvents.push([eventId, result]);
       this.eventResult = result;
       this.eventId = undefined;
+      this.setv(eventId[1], result);
     } else {
       if (this.eventId) {
         console.log(`Session received unexpected event ${eventId} which doesn't match expected event ${this.eventId}`);
@@ -107,12 +109,12 @@ export class Session {
   }
 
   /**
-   *
+   * Gets variables from the session store
    * @param key -
    *        lowercase first letter = local value
    *        uppercase first letter = global value
    *        undefined = return all local values
-   *        true = return global values (which inlcudes all local values)
+   *        true = return global values (which includes all local values)
    */
   public getv(key?: string | true) {
     if (isString(key)) {
@@ -148,6 +150,14 @@ export class Session {
     const chat = async (text: string) => {
       return await this.chat(text);
     };
+
+    const getInput = async (resultKey: string, type: 'string' | 'float' | 'int' = 'string', re?: string, hintMessage?: string) => {
+      const eventId: EventId = [fn.name, resultKey];
+      await this.userInterface.getUserInput(eventId, type, re, hintMessage);
+      const result = await this.waitForUserEvent(eventId, async (result: string) => result);
+      return result;
+    }
+
     const choose = async (choiceKey: string, buttons: ReplyButtonDef[] | CompactReplyActionsDef | string[]) => {
       const eventId: EventId = [fnName, choiceKey];
       const normalizedButtons = normalizeReplyButtons(buttons);
@@ -160,7 +170,7 @@ export class Session {
       });
       return result;
     }
-    return { chat, choose, setv, getv, start };
+    return { chat, choose, setv, getv, start, getInput };
   }
 }
 

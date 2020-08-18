@@ -29,6 +29,24 @@ export class TortureChamber implements IUserInterface {
     console.log(`Unable to show form ${form} - not implemented`);
   }
 
+  async getUserInput(eventId: EventId, type: 'string' | 'float' | 'int' = 'string', regexp?: string, hintMessage?: string) {
+    const re = regexp ? new RegExp(regexp) : undefined;
+    var input: string | number = "";
+    input = readlineSync.question("> ");
+    while (re && !re.test(input)) {
+      if (hintMessage) {
+        console.log(hintMessage);
+      }
+      input = readlineSync.question("> ");
+    }
+    if (type === 'float') {
+      input = parseFloat(input)
+    } else if (type === 'int') {
+      input = parseInt(input)
+    }
+    this.simulateUserResponse(eventId, input);
+  }
+
   async showReplyButtons(eventId: EventId, buttons: ReplyButtonDef[]) {
     await this.session.pause(20, false);
 
@@ -44,10 +62,7 @@ export class TortureChamber implements IUserInterface {
       selection = readlineSync.questionInt(`Choose (1 - ${buttons.length}): `);
     } while (!isNumber(selection) || selection<1 || selection>buttons.length);
 
-    // simulate user asynchronously clicking a button:
-    setTimeout(() => {
-      this.session.handleEvent(eventId, buttons[selection - 1].result);
-    }, 100);
+    this.simulateUserResponse(eventId, buttons[selection - 1].result);
   }
 
   async showText(text: string) {
@@ -62,6 +77,13 @@ export class TortureChamber implements IUserInterface {
     readline.clearLine(process.stdout, -1);  // clear current text
     readline.cursorTo(process.stdout, 0);
     this.ellipsis = undefined;
+  }
+
+  private simulateUserResponse(eventId: EventId, result: any): void {
+    // simulate user asynchronously clicking a button:
+    setTimeout(() => {
+      this.session.handleEvent(eventId, result);
+    }, 100);
   }
 
   private animateEllipsis() {

@@ -4,6 +4,7 @@ export type FormDef = {}; // TODO some representatio of FORM input capabilities
 export interface IUserInterface {
   showForm(form: any): Promise<void>;
   showReplyButtons(eventId: EventId, buttons: ReplyButtonDef[]): Promise<void>;
+  getUserInput(eventId: EventId, type?: 'string' | 'float' | 'int', regexp?: string, hintMessage?: string): Promise<void>;
   showText(text: string): Promise<void>;
   showEllipsis(): Promise<void>;
   hideEllipsis(): Promise<void>;
