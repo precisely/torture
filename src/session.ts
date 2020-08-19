@@ -4,6 +4,7 @@ import { isUndefined, isArray, isString } from "util";
 export type Vars = {[key:string]: any};
 export type ProcessFunction = (session: Session, ...args: any[]) => Promise<Vars>;
 export type SessionMode = 'chat' | 'form';
+export type GetInputType = 'string' | 'float' | 'int';
 
 export type Process = (methods: SessionMethods, ...args: any[]) => Promise<any>;
 
@@ -13,7 +14,7 @@ export type SessionMethods = {
   chat(text: string): Promise<void>,
   choose(choiceKey: string, buttons: ReplyButtonDef[] | CompactReplyActionsDef | string[]): Promise<any>,
   start(fn: Process | [Process, string], ...args: any[]): Promise<any>;
-  getInput(resultKey: string, re?: string, hintMessage?: string): Promise<string>;
+  getInput(resultKey: string, type?: GetInputType, re?: string, hintMessage?: string): Promise<string>;
 };
 
 export type CompactReplyActionsDef = { [choiceKey: string]: () => any };
@@ -151,7 +152,7 @@ export class Session {
       return await this.chat(text);
     };
 
-    const getInput = async (resultKey: string, type: 'string' | 'float' | 'int' = 'string', re?: string, hintMessage?: string) => {
+    const getInput = async (resultKey: string, type: GetInputType = 'string', re?: string, hintMessage?: string) => {
       const eventId: EventId = [fn.name, resultKey];
       await this.userInterface.getUserInput(eventId, type, re, hintMessage);
       const result = await this.waitForUserEvent(eventId, async (result: string) => result);
